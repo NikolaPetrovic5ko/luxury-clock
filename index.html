@@ -6,25 +6,38 @@
     <title>Luxury Clock</title>
 
     <style>
+      * {
+        box-sizing: border-box;
+      }
+
       body {
         margin: 0;
-        height: 100vh;
+        min-height: 100vh;
         display: grid;
         place-items: center;
+        background: radial-gradient(circle at top, #1b1b1b, #050505 80%);
+        overflow: hidden;
+      }
 
-        /* Dark luxury background (deep gradient, not flat black) */
-        background: radial-gradient(circle at top, #1a1a1a, #050505 80%);
+      .clock-wrap {
+        width: min(88vw, 460px);
+        aspect-ratio: 1;
+        display: grid;
+        place-items: center;
       }
 
       canvas {
-        width: 420px;
-        height: 420px;
+        width: 100%;
+        height: 100%;
+        display: block;
       }
     </style>
   </head>
 
   <body>
-    <canvas id="canvas" width="420" height="420"></canvas>
+    <div class="clock-wrap">
+      <canvas id="canvas" width="420" height="420"></canvas>
+    </div>
 
     <script>
       const canvas = document.getElementById("canvas");
@@ -34,26 +47,45 @@
       const cy = canvas.height / 2;
       const radius = canvas.width / 2;
 
-      /* Centralized theme → easier to tweak design later */
+      // Centralized visual tokens
       const theme = {
-        gold: "#d4af37",
-        goldSoft: "#b8962e",
-        dark: "#0b0b0b",
-        dial: "#111",
-        light: "#f5f5f5",
+        gold: "#c6a43a",
+        goldSoft: "#a7862f",
+        goldHighlight: "#e1c15a",
+        dark: "#050505",
+        dialOuter: "#07090d",
+        dialInner: "#1a1a1a",
+        light: "#f2f2f2",
+        minuteMarker: "rgba(255,255,255,0.14)",
+        second: "#b93227",
       };
 
       function drawClock() {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+        drawShadow();
         drawBezel();
+        drawInnerRing();
         drawDial();
         drawMarkers();
         drawHands();
         drawCenter();
       }
 
-      /* Outer metallic ring */
+      // Soft shadow behind the watch body
+      function drawShadow() {
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.9, 0, Math.PI * 2);
+        ctx.fillStyle = "rgba(0,0,0,0.01)";
+        ctx.shadowColor = "rgba(0,0,0,0.45)";
+        ctx.shadowBlur = 28;
+        ctx.shadowOffsetY = 10;
+        ctx.fill();
+        ctx.restore();
+      }
+
+      // Metallic bezel
       function drawBezel() {
         const grad = ctx.createLinearGradient(
           0,
@@ -62,133 +94,174 @@
           canvas.height,
         );
 
-        /* Metallic illusion: alternating light/dark tones */
-        grad.addColorStop(0, "#eee");
-        grad.addColorStop(0.3, "#888");
-        grad.addColorStop(0.5, "#fff");
-        grad.addColorStop(0.7, "#666");
-        grad.addColorStop(1, "#ddd");
+        // The bezel must feel metallic, but not too noisy
+        grad.addColorStop(0, "#f2f2f2");
+        grad.addColorStop(0.18, "#bdbdbd");
+        grad.addColorStop(0.38, "#8d8d8d");
+        grad.addColorStop(0.52, "#ffffff");
+        grad.addColorStop(0.7, "#7a7a7a");
+        grad.addColorStop(1, "#d8d8d8");
 
         ctx.beginPath();
         ctx.arc(cx, cy, radius * 0.95, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
+      }
 
-        /* Inner gold ring (luxury detail) */
+      // Thin gold accent ring inside bezel
+      function drawInnerRing() {
         ctx.beginPath();
-        ctx.arc(cx, cy, radius * 0.88, 0, Math.PI * 2);
+        ctx.arc(cx, cy, radius * 0.885, 0, Math.PI * 2);
         ctx.strokeStyle = theme.gold;
-        ctx.lineWidth = 4;
+        ctx.lineWidth = 3;
         ctx.stroke();
       }
 
-      /* Dark dial */
+      // Dial with subtle center glow
       function drawDial() {
         const grad = ctx.createRadialGradient(
           cx,
           cy,
-          radius * 0.2,
+          radius * 0.08,
           cx,
           cy,
-          radius * 0.85,
+          radius * 0.84,
         );
 
-        /* Slight gradient avoids flatness */
-        grad.addColorStop(0, "#1a1a1a");
-        grad.addColorStop(1, "#050505");
+        grad.addColorStop(0, theme.dialInner);
+        grad.addColorStop(0.55, "#0e1014");
+        grad.addColorStop(1, theme.dialOuter);
 
         ctx.beginPath();
         ctx.arc(cx, cy, radius * 0.85, 0, Math.PI * 2);
         ctx.fillStyle = grad;
         ctx.fill();
+
+        // Subtle inner border to separate dial from bezel
+        ctx.beginPath();
+        ctx.arc(cx, cy, radius * 0.84, 0, Math.PI * 2);
+        ctx.strokeStyle = "rgba(255,255,255,0.04)";
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
-      /* Hour + minute markers */
+      // Markers as rectangles = cleaner and more stable than stroked lines
       function drawMarkers() {
         ctx.save();
         ctx.translate(cx, cy);
 
         for (let i = 0; i < 60; i++) {
-          ctx.rotate(Math.PI / 30);
-
           const isHour = i % 5 === 0;
 
-          ctx.beginPath();
+          ctx.save();
+          ctx.rotate((i * Math.PI) / 30);
 
-          /* Longer + thicker for hour markers */
-          ctx.moveTo(0, -radius * (isHour ? 0.68 : 0.74));
-          ctx.lineTo(0, -radius * 0.8);
+          if (isHour) {
+            ctx.fillStyle = theme.gold;
 
-          ctx.lineWidth = isHour ? 4 : 1.5;
-          ctx.strokeStyle = isHour ? theme.gold : "rgba(255,255,255,0.2)";
-          ctx.stroke();
+            // Centered rectangle marker
+            // Slightly pulled inward for better luxury spacing
+            ctx.fillRect(-1.2, -radius * 0.79, 2.4, 20);
+          } else {
+            ctx.fillStyle = theme.minuteMarker;
+            ctx.fillRect(-0.55, -radius * 0.79, 1.1, 12);
+          }
+
+          ctx.restore();
         }
 
         ctx.restore();
       }
 
-      /* Hands */
       function drawHands() {
         const now = new Date();
 
-        /* Smooth motion using milliseconds */
+        // Smooth motion gives more premium feel
         const sec = now.getSeconds() + now.getMilliseconds() / 1000;
         const min = now.getMinutes() + sec / 60;
         const hr = (now.getHours() % 12) + min / 60;
 
-        drawHand((hr * Math.PI) / 6, radius * 0.45, 8, theme.gold);
-        drawHand((min * Math.PI) / 30, radius * 0.65, 5, theme.light);
-
+        drawHourHand((hr * Math.PI) / 6);
+        drawMinuteHand((min * Math.PI) / 30);
         drawSecondHand((sec * Math.PI) / 30);
       }
 
-      /* Generic hand */
-      function drawHand(angle, length, width, color) {
+      function drawHourHand(angle) {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(angle);
 
-        /* Subtle shadow adds depth */
-        ctx.shadowColor = "rgba(0,0,0,0.4)";
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
         ctx.shadowBlur = 6;
         ctx.shadowOffsetY = 2;
 
         ctx.beginPath();
-        ctx.moveTo(0, 10); // small tail
-        ctx.lineTo(0, -length); // main direction
-        ctx.lineWidth = width;
+        ctx.moveTo(0, 10);
+        ctx.lineTo(0, -radius * 0.43);
+        ctx.lineWidth = 8;
         ctx.lineCap = "round";
-        ctx.strokeStyle = color;
+        ctx.strokeStyle = theme.gold;
         ctx.stroke();
 
         ctx.restore();
       }
 
-      /* Thin red second hand for contrast */
+      function drawMinuteHand(angle) {
+        ctx.save();
+        ctx.translate(cx, cy);
+        ctx.rotate(angle);
+
+        ctx.shadowColor = "rgba(0,0,0,0.35)";
+        ctx.shadowBlur = 5;
+        ctx.shadowOffsetY = 2;
+
+        ctx.beginPath();
+        ctx.moveTo(0, 12);
+        ctx.lineTo(0, -radius * 0.63);
+        ctx.lineWidth = 5;
+        ctx.lineCap = "round";
+        ctx.strokeStyle = theme.light;
+        ctx.stroke();
+
+        ctx.restore();
+      }
+
       function drawSecondHand(angle) {
         ctx.save();
         ctx.translate(cx, cy);
         ctx.rotate(angle);
 
+        // Rear tail keeps the second hand feeling more watch-like
         ctx.beginPath();
-        ctx.moveTo(0, 15);
-        ctx.lineTo(0, -radius * 0.75);
+        ctx.moveTo(0, 14);
+        ctx.lineTo(0, radius * 0.08);
         ctx.lineWidth = 2;
-        ctx.strokeStyle = "#c0392b";
+        ctx.strokeStyle = theme.second;
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(0, 8);
+        ctx.lineTo(0, -radius * 0.72);
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = theme.second;
         ctx.stroke();
 
         ctx.restore();
       }
 
-      /* Center cap (important visual anchor) */
+      // Two-layer center cap looks more refined than one flat circle
       function drawCenter() {
         ctx.beginPath();
-        ctx.arc(cx, cy, 8, 0, Math.PI * 2);
+        ctx.arc(cx, cy, 6.5, 0, Math.PI * 2);
         ctx.fillStyle = theme.gold;
+        ctx.fill();
+
+        ctx.beginPath();
+        ctx.arc(cx, cy, 2.4, 0, Math.PI * 2);
+        ctx.fillStyle = "#222";
         ctx.fill();
       }
 
-      /* requestAnimationFrame → smooth premium motion */
       function animate() {
         drawClock();
         requestAnimationFrame(animate);
